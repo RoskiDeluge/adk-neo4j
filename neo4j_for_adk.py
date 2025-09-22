@@ -1,3 +1,7 @@
+from neo4j import (
+    GraphDatabase,
+    Result,
+)
 import os
 from typing import Any, Dict
 import atexit
@@ -5,17 +9,14 @@ import atexit
 from dotenv import load_dotenv
 load_dotenv()
 
-from neo4j import (
-    GraphDatabase,
-    Result,
-)
 
-def tool_success(key:str,result: Any) -> Dict[str, Any]:
+def tool_success(key: str, result: Any) -> Dict[str, Any]:
     """Convenience function to return a success result."""
     return {
         'status': 'success',
         key: result
     }
+
 
 def tool_error(message: str) -> Dict[str, Any]:
     """Convenience function to return an error result."""
@@ -23,6 +24,7 @@ def tool_error(message: str) -> Dict[str, Any]:
         'status': 'error',
         'error_message': message
     }
+
 
 def to_python(value):
     from neo4j.graph import Node, Relationship, Path
@@ -64,7 +66,7 @@ def to_python(value):
 def result_to_adk(result: Result) -> Dict[str, Any]:
     eager_result = result.to_eager_result()
     records = [to_python(record.data()) for record in eager_result.records]
-    return tool_success("query_result",records)
+    return tool_success("query_result", records)
 
 
 class Neo4jForADK:
@@ -78,24 +80,25 @@ class Neo4jForADK:
         neo4j_uri = os.getenv("NEO4J_URI")
         neo4j_username = os.getenv("NEO4J_USERNAME") or "neo4j"
         neo4j_password = os.getenv("NEO4J_PASSWORD")
-        neo4j_database = os.getenv("NEO4J_DATABASE") or os.getenv("NEO4J_USERNAME") or "neo4j"
+        neo4j_database = os.getenv("NEO4J_DATABASE") or os.getenv(
+            "NEO4J_USERNAME") or "neo4j"
         self.database_name = neo4j_database
-        self._driver =  GraphDatabase.driver(
+        self._driver = GraphDatabase.driver(
             neo4j_uri,
             auth=(neo4j_username, neo4j_password)
         )
-    
+
     def get_driver(self):
         return self._driver
-    
+
     def close(self):
         return self._driver.close()
-    
+
     def send_query(self, cypher_query, parameters=None) -> Dict[str, Any]:
         session = self._driver.session()
         try:
             result = session.run(
-                cypher_query, 
+                cypher_query,
                 parameters or {},
                 database_=self.database_name
             )
@@ -104,6 +107,20 @@ class Neo4jForADK:
             return tool_error(str(e))
         finally:
             session.close()
+
+    def get_import_directory(self) -> Dict[str, Any]:
+        """Returns the path to the neo4j_import directory."""
+        import os
+        from pathlib import Path
+
+        # Get the current working directory and look for neo4j_import folder
+        current_dir = Path.cwd()
+        neo4j_import_dir = current_dir / "neo4j_import"
+
+        if not neo4j_import_dir.exists():
+            return tool_error(f"neo4j_import directory not found at {neo4j_import_dir}")
+
+        return tool_success("neo4j_import_dir", str(neo4j_import_dir))
 
 
 graphdb = Neo4jForADK()
