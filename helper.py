@@ -1,5 +1,3 @@
-# Add your utilities or helper functions to this file.
-
 import os
 from dotenv import load_dotenv, find_dotenv
 

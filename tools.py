@@ -1,4 +1,3 @@
-
 import logging
 from pathlib import Path
 from itertools import islice
